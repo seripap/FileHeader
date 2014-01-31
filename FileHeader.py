@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 # @Author: lime
 # @Date:   2013-10-28 13:39:48
-# @Last Modified by:   lime
-# @Last Modified time: 2013-11-22 11:19:13
+# @Last Modified 2014-01-31
+# @Last Modified time: 2014-01-31 02:31:00
 
 import os
 import sys
@@ -64,7 +64,7 @@ def plugin_loaded():
                 shutil.rmtree(PLUGIN_PATH)
             except:
                 pass
-    
+
         if not os.path.exists(PLUGIN_PATH):
             os.mkdir(PLUGIN_PATH)
 
@@ -124,6 +124,14 @@ def get_strftime():
         format = _[0]
     return format
 
+def get_file_name():
+    current_view = Window().active_view()
+    if current_view:
+        file_name = current_view.file_name()
+        file_name = file_name.split('/')
+        file_name = file_name[-1]
+
+    return file_name
 
 def get_user():
     '''Get user'''
@@ -185,6 +193,8 @@ def get_args(syntax_type, options={}):
 
     format = get_strftime()
     c_time, m_time = get_st3_time() if IS_ST3 else get_st2_time()
+    file_name = get_file_name()
+    args.update({'file_name': file_name})
     args.update({'create_time': c_time.strftime(format)})
     args.update({'last_modified_time': m_time.strftime(format)})
 
@@ -393,7 +403,7 @@ class FileHeaderAddHeaderCommand(sublime_plugin.WindowCommand):
         '''Whether can add header to path'''
 
         def can_add_to_dir(path):
-            return enable_add_to_hidden_dir or (not enable_add_to_hidden_dir 
+            return enable_add_to_hidden_dir or (not enable_add_to_hidden_dir
                                                 and not self.is_hidden(path))
 
         if not os.path.exists(path):
@@ -506,7 +516,7 @@ class FileHeaderListener(sublime_plugin.EventListener):
         what = what.upper()
         syntax_type = get_syntax_type(view.file_name())
 
-        template = get_template_part(syntax_type, 'header')    
+        template = get_template_part(syntax_type, 'header')
         lines = template.split('\n')
 
         line_pattern = None
@@ -522,13 +532,13 @@ class FileHeaderListener(sublime_plugin.EventListener):
                     if line[i] != ' ':
                         space_start = i + 1
                         line_header = line[: space_start]
-                        break       
+                        break
 
                 line_header = re.escape(line_header)
                 if what == 'BY':
                     line_pattern = '%s.*\n' % line_header
                 else:
-                    line_pattern = '%s\s*%s.*\n' % (line_header, 
+                    line_pattern = '%s\s*%s.*\n' % (line_header,
                                                     self.time_pattern())
                 break
 
@@ -536,17 +546,17 @@ class FileHeaderListener(sublime_plugin.EventListener):
             _ = view.find(line_pattern, 0)
             if(_ != sublime.Region(-1, -1) and _ is not None):
                 a = _.a + space_start
-                b = _.b - 1    
+                b = _.b - 1
 
                 spaces = (index - space_start) * ' '
                 if what == 'BY':
                     args = get_args(syntax_type)
                     strings = (spaces + args['last_modified_by'])
-                else:                    
+                else:
                     strftime = get_strftime()
                     time = datetime.now().strftime(strftime)
                     strings = (spaces + time)
-                view.run_command('file_header_replace', 
+                view.run_command('file_header_replace',
                                  {'a': a, 'b': b,'strings': strings})
 
     def insert_template(self, view, exists):
@@ -590,5 +600,5 @@ class FileHeaderListener(sublime_plugin.EventListener):
         c_time, _ = get_time(view.file_name())
         if c_time is not None and settings.get('c_time', None) is None:
             settings.set('c_time', pickle.dumps(c_time))
-            
+
         self.insert_template(view, True)
